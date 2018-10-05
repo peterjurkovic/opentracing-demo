@@ -27,7 +27,22 @@ services:
       - "3000"
     ports:
       - "3000:3000"
-
+   
+  quota-service:
+    build:
+      context: ./quota/
+      dockerfile: ./Dockerfile
+    networks:
+      nexmotracing:
+        aliases:
+          - quota-service
+    expose:
+      - "6003"
+    ports:
+      - "6003:6003"
+    environment:
+      - QUOTA_HTTP_COLLECTOR_URL=http://jaeger:14268/api/traces
+    
   jaeger:
     image: jaegertracing/all-in-one
     environment:
