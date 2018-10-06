@@ -4,7 +4,7 @@ const middleware = require('express-opentracing').default;
 const opentracing = require("opentracing");
 const sleep = require('sleep');
 const app = express()
-const PORT = 3000;
+const PORT = process.env.AUTH_SERVER_PORT || 3030;
 const HOST = '0.0.0.0';
 
 function initTracer(serviceName) {
@@ -37,7 +37,8 @@ const tracer = initTracer("auth-service");
 app.use(middleware({tracer: tracer}));
 
 app.get('/auth', function(req, res) { 
-	 console.log( 'Chil span: ' + req.span ? 'PRESENT' : 'UNDEFINED');
+	console.log( 'Child span: ' + req.span ? 'PRESENT' : 'NOT SET');
+  console.log(JSON.stringify(req.headers));
 
 	const span = tracer.startSpan("user_looup", {childOf: req.span});	
 		span.setTag("db.type", "sql");

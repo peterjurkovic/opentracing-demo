@@ -7,7 +7,7 @@ import (
 
 var (
 
-	ServerAddress = getenv("QUOTA_SERVER_ADDRESS", ":6003")
+	ServerAddress = getenv("QUOTA_SERVER_ADDRESS", ":6060")
 
 	ServiceName = "quota-service"
 

@@ -14,6 +14,10 @@ services:
       - "8080"
     ports:
       - "8080:8080"
+    depends_on:
+      - auth-service
+      - quota-service
+      - chatapp-service
 
   auth-service:
     build:
@@ -24,10 +28,12 @@ services:
         aliases:
           - auth-service
     expose:
-      - "3000"
+      - "3030"
     ports:
-      - "3000:3000"
-   
+      - "3030:3030"
+    environment:
+      - AUTH_SERVER_PORT=3030
+
   quota-service:
     build:
       context: ./quota/
@@ -37,12 +43,32 @@ services:
         aliases:
           - quota-service
     expose:
-      - "6003"
+      - "6060"
     ports:
-      - "6003:6003"
+      - "6060:6060"
     environment:
       - QUOTA_HTTP_COLLECTOR_URL=http://jaeger:14268/api/traces
-    
+
+  chatapp-service:
+    build:
+      context: ./chatapp/
+      dockerfile: ./Dockerfile
+    networks:
+      nexmotracing:
+        aliases:
+          - chatapp-service
+    expose:
+      - "7070"
+    ports:
+      - "7070:7070"
+    environment:
+      - CHATAPP_HTTP_COLLECTOR_URL=http://jaeger:14268/api/traces
+      - AUTH_HOST=nginx
+      - QUOTA_HOST=nginx
+    depends_on:
+      - auth-service
+      - quota-service
+
   jaeger:
     image: jaegertracing/all-in-one
     environment:
