@@ -25,15 +25,17 @@ public class ChatappController {
     private ChatappApplication.Props props;
 
     @GetMapping
-    public Map<String,String> sendMessage(@RequestHeader("uber-trace-id") String traceId){
+    public Map<String,String> sendMessage(@RequestHeader(value = "uber-trace-id", required = false) String traceId){
         Span serverSpan = tracer.activeSpan();
 
         Span span = tracer.buildSpan("parsing")
                           .asChildOf(serverSpan)
                           .start();
+
         try {
             Thread.sleep(25L);
             serverSpan.setBaggageItem("messageID", UUID.randomUUID().toString());
+            serverSpan.setBaggageItem("apiKey", "nexmo");
         } catch (InterruptedException e) {
             // ignore
         } finally {

@@ -38,10 +38,11 @@ const mysqlTracer = initTracer("mysql");
 app.use(middleware({tracer: tracer}));
 
 app.get('/auth', function(req, res) { 
-  console.log( 'Auth request received');
+  console.log( 'Auth request received. MessageId ',  req.span.getBaggageItem("messageId"));
   console.log(JSON.stringify(req.headers));
 
   const span = mysqlTracer.startSpan("SQL SELECT", {childOf: req.span}); 
+
   span.setTag("span.kind", "client");
   span.setTag("peer.service", "mysql");
   span.setTag("db.type", "sql");
@@ -50,10 +51,10 @@ app.get('/auth', function(req, res) {
   if (req.query.fail){
     span.logEvent("mysql_timeout", {"apiKey" : "nexmo"})
     span.setTag("error", true);
-    sleep.msleep(50);
+    sleep.msleep(150);
     res.status(503);
   }else{
-    sleep.msleep(100);
+    sleep.msleep(50);
     span.logEvent("user_loaded");
   }
 

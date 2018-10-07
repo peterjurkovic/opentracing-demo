@@ -7,21 +7,30 @@ import io.jaegertracing.internal.reporters.CompositeReporter;
 import io.jaegertracing.internal.reporters.LoggingReporter;
 import io.jaegertracing.internal.reporters.RemoteReporter;
 import io.jaegertracing.internal.samplers.ConstSampler;
+import io.jaegertracing.micrometer.MicrometerMetricsFactory;
 import io.jaegertracing.spi.MetricsFactory;
 import io.jaegertracing.spi.Reporter;
 import io.jaegertracing.spi.Sampler;
 import io.jaegertracing.spi.Sender;
 import io.jaegertracing.thrift.internal.senders.HttpSender;
+import io.jaegertracing.tracerresolver.internal.JaegerTracerResolver;
 import io.opentracing.Tracer;
+import io.opentracing.contrib.metrics.micrometer.MicrometerMetricsReporter;
+import io.opentracing.contrib.metrics.prometheus.PrometheusMetricsReporter;
+import io.opentracing.contrib.web.servlet.filter.TracingFilter;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.servlet.ServletContextInitializer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 @Configuration
-public class TracingConfig {
+public class TracingConfig implements ServletContextInitializer {
 
     @Value("${service.name}")
     private String serviceName;
@@ -33,12 +42,20 @@ public class TracingConfig {
 
     @Bean
     public Tracer tracer(Sampler sampler, Reporter reporter) {
-        return new JaegerTracer.Builder(serviceName)
-                .withTag("host", "myHost")
-                .withReporter(reporter)
-                .withSampler(sampler)
-                .withExpandExceptionLogs()
-                .build();
+
+        Tracer tracer = new JaegerTracer.Builder(serviceName)
+                                        .withTag("host", "myHost")
+                                        .withReporter(reporter)
+                                        .withSampler(sampler)
+                                        .withExpandExceptionLogs()
+                                        .withMetricsFactory(new MicrometerMetricsFactory())
+                                        .build();
+    
+        MicrometerMetricsReporter metricsReporter = MicrometerMetricsReporter.newMetricsReporter()
+                                                                             .withBaggageLabel("apiKey", "N/A")
+                                                                             .build();
+
+        return io.opentracing.contrib.metrics.Metrics.decorate(tracer, metricsReporter);
     }
 
 
@@ -84,5 +101,10 @@ public class TracingConfig {
     @Bean
     public Sampler sampler(Metrics metrics) {
         return new ConstSampler(true);
+    }
+
+    @Override
+    public void onStartup(ServletContext servletContext) throws ServletException {
+        servletContext.setAttribute(TracingFilter.SKIP_PATTERN, Pattern.compile("/actuator"));
     }
 }
