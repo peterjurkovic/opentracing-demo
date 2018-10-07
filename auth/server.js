@@ -33,18 +33,31 @@ function initTracer(serviceName) {
 }
 
 const tracer = initTracer("auth-service");
+const mysqlTracer = initTracer("mysql");
 
 app.use(middleware({tracer: tracer}));
 
 app.get('/auth', function(req, res) { 
-  console.log( 'Child span: ' + req.span ? 'PRESENT' : 'NOT SET');
+  console.log( 'Auth request received');
   console.log(JSON.stringify(req.headers));
 
-  const span = tracer.startSpan("user_looup", {childOf: req.span}); 
-    span.setTag("db.type", "sql");
-    span.setTag("db.statement", "SELECT apiKey, secret FROM account WHERE `apiKey`='nexmo'");
-    sleep.msleep(250);
+  const span = mysqlTracer.startSpan("SQL SELECT", {childOf: req.span}); 
+  span.setTag("span.kind", "client");
+  span.setTag("peer.service", "mysql");
+  span.setTag("db.type", "sql");
+  span.setTag("db.statement", "SELECT apiKey, secret FROM account WHERE `apiKey`='nexmo'");
+  
+  if (req.query.fail){
+    span.logEvent("mysql_timeout", {"apiKey" : "nexmo"})
+    span.setTag("error", true);
+    sleep.msleep(50);
+    res.status(503);
+  }else{
+    sleep.msleep(100);
     span.logEvent("user_loaded");
+  }
+
+
 
   span.finish();
 
@@ -55,7 +68,7 @@ app.get('/auth', function(req, res) {
   authCheckSpan.finish();
 
   res.send({"status" : "ok"});  
-  console.log( 'Auth chec: OK');
+  console.log( 'Auth check: OK');
 })
 
 app.listen(PORT, HOST)

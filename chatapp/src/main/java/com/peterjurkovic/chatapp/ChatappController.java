@@ -40,7 +40,11 @@ public class ChatappController {
             span.finish();
         }
 
-        restTemplate.getForEntity(props.getAuthUrl()+ "/auth", Object.class);
+        try{
+            restTemplate.getForEntity(props.getAuthUrl()+ "/auth?fail=true", Object.class);
+        }catch (Exception e){
+            restTemplate.getForEntity(props.getAuthUrl()+ "/auth", Object.class);
+        }
         restTemplate.getForEntity(props.getQuotaUrl() + "/balance", Object.class);
 
         return Collections.singletonMap("traceId", traceId);
