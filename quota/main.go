@@ -6,13 +6,15 @@ import (
 	"fmt"
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
+	tags "github.com/opentracing/opentracing-go/ext"
 	"net/http"
 	"net/http/httputil"
 	"time"
 )
 
 
- var tracer opentracing.Tracer = ot.Init(config.ServiceName, config.HttpCollectorURL)
+var tracer opentracing.Tracer = ot.Init(config.ServiceName, config.HttpCollectorURL)
+var dbTracer  opentracing.Tracer = ot.Init("couchbase", config.HttpCollectorURL)
 
 func quota(w http.ResponseWriter, r *http.Request) {
 
@@ -34,7 +36,14 @@ func quota(w http.ResponseWriter, r *http.Request) {
 
 	serverSpan := opentracing.StartSpan(
 		"balance_check",
-		 ext.RPCServerOption(wireContext))
+		ext.RPCServerOption(wireContext))
+
+	span := dbTracer.StartSpan("N1QL QUERY", opentracing.ChildOf(serverSpan.Context()))
+	tags.SpanKindRPCClient.Set(span)
+	tags.PeerService.Set(span, "couchbase")
+	span.SetTag("n1ql.query", "SELECT balance FROM account_balance WHERE api_key=ANY")
+	time.Sleep(50)
+	span.Finish()
 
 	time.Sleep(config.SleepTimeout)
 

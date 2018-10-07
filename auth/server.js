@@ -37,24 +37,24 @@ const tracer = initTracer("auth-service");
 app.use(middleware({tracer: tracer}));
 
 app.get('/auth', function(req, res) { 
-	console.log( 'Child span: ' + req.span ? 'PRESENT' : 'NOT SET');
+  console.log( 'Child span: ' + req.span ? 'PRESENT' : 'NOT SET');
   console.log(JSON.stringify(req.headers));
 
-	const span = tracer.startSpan("user_looup", {childOf: req.span});	
-		span.setTag("db.type", "sql");
-		span.setTag("db.statement", "SELECT apiKey, secret FROM account WHERE `apiKey`='nexmo'");
-		sleep.msleep(250);
-		span.logEvent("user_loaded");
+  const span = tracer.startSpan("user_looup", {childOf: req.span}); 
+    span.setTag("db.type", "sql");
+    span.setTag("db.statement", "SELECT apiKey, secret FROM account WHERE `apiKey`='nexmo'");
+    sleep.msleep(250);
+    span.logEvent("user_loaded");
 
-	span.finish();
+  span.finish();
 
-	const authCheckSpan = tracer.startSpan("credentials_check", {childOf: req.span});	
-		
-	sleep.msleep(30);
-	
-	authCheckSpan.finish();
+  const authCheckSpan = tracer.startSpan("credentials_check", {childOf: req.span}); 
+    
+  sleep.msleep(30);
+  
+  authCheckSpan.finish();
 
-	res.send({"status" : "ok"});	
+  res.send({"status" : "ok"});  
   console.log( 'Auth chec: OK');
 })
 

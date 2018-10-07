@@ -11,7 +11,7 @@ var (
 
 	ServiceName = "quota-service"
 
-	SleepTimeout =  100 * time.Millisecond
+	SleepTimeout =  80 * time.Millisecond
 
 	AgentHost = "localhost"
 
