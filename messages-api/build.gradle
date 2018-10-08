@@ -1,0 +1,48 @@
+buildscript {
+	ext {
+		springBootVersion = '2.0.5.RELEASE'
+	}
+	repositories {
+		mavenCentral()
+	}
+	dependencies {
+		classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+	}
+}
+
+apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'org.springframework.boot'
+apply plugin: 'io.spring.dependency-management'
+
+group = 'com.peterjurkovic'
+version = ''
+sourceCompatibility = 1.8
+
+repositories {
+	mavenCentral()
+}
+
+
+dependencies {
+	implementation('org.springframework.boot:spring-boot-starter-web')
+    implementation('org.springframework.boot:spring-boot-starter-actuator')
+    implementation('org.springframework.kafka:spring-kafka:2.1.10.RELEASE')
+
+    implementation('io.opentracing.contrib:opentracing-spring-web-starter:0.3.3')
+    implementation('io.opentracing.contrib:opentracing-spring-jaeger-web-starter:0.2.1')
+    implementation('io.opentracing.contrib:opentracing-metrics-prometheus:0.3.0')
+    implementation('io.opentracing.contrib:opentracing-metrics-micrometer:0.3.0')
+    implementation('io.opentracing.contrib:opentracing-kafka-spring:0.0.15')
+
+
+    implementation('io.jaegertracing:jaeger-client:0.31.0')
+    implementation('io.jaegertracing:jaeger-micrometer:0.31.0')
+
+    implementation('io.micrometer:micrometer-core:1.0.6')
+    implementation('io.micrometer:micrometer-registry-prometheus:1.0.6')
+
+	compile group: 'org.apache.kafka', name: 'kafka-clients', version: '2.0.0'
+
+	testImplementation('org.springframework.boot:spring-boot-starter-test')
+}

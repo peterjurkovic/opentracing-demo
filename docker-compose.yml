@@ -17,7 +17,7 @@ services:
     depends_on:
       - auth-service
       - quota-service
-      - chatapp-service
+      - messages-api-service
 
   auth-service:
     build:
@@ -49,25 +49,45 @@ services:
     environment:
       - QUOTA_HTTP_COLLECTOR_URL=http://jaeger:14268/api/traces
 
-  chatapp-service:
+  messages-api-service:
     build:
-      context: ./chatapp/
+      context: ./messages-api/
       dockerfile: ./Dockerfile
     networks:
       nexmotracing:
         aliases:
-          - chatapp-service
+          - messages-api-service
     expose:
       - "7070"
     ports:
       - "7070:7070"
     environment:
-      - CHATAPP_HTTP_COLLECTOR_URL=http://jaeger:14268/api/traces
+      - HTTP_COLLECTOR_URL=http://jaeger:14268/api/traces
       - AUTH_HOST=nginx
       - QUOTA_HOST=nginx
+      - KAFKA_HOST=kafka:9092
     depends_on:
       - auth-service
       - quota-service
+      - kafka
+
+  messages-backend-service:
+    build:
+      context: ./messages-backend/
+      dockerfile: ./Dockerfile
+    networks:
+      nexmotracing:
+        aliases:
+          - messages-backend-service
+    expose:
+      - "8080"
+    ports:
+      - "7080:7080"
+    environment:
+      - HTTP_COLLECTOR_URL=http://jaeger:14268/api/traces
+      - KAFKA_HOST=kafka:9092
+    depends_on:
+      - kafka
 
   jaeger:
     image: jaegertracing/all-in-one
@@ -94,33 +114,30 @@ services:
       - "14268:14268"
       - "16686:16686"
 
-#  zookeeper:
-#    image: confluentinc/cp-zookeeper:latest
-#    environment:
-#      - ZOOKEEPER_CLIENT_PORT= 2181
-#      - ZOOKEEPER_TICK_TIME=2000
-#    networks:
-#      nexmotracing:
-#        aliases:
-#          - zookeeper
-#  
-#  kafka:
-#    image: confluentinc/cp-kafka:latest
-#    ports:
-#      - 9092:9092
-#    environment:
-#      - KAFKA_BROKER_ID= 1
-#      - KAFKA_ZOOKEEPER_CONNECT= zookeeper:2181
-#      - KAFKA_ADVERTISED_LISTENERS= PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
-#      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP= PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-#      - KAFKA_INTER_BROKER_LISTENER_NAME= PLAINTEXT
-#      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR= 1
-#    networks:
-#      nexmotracing:
-#        aliases:
-#          - kafka
-#    depends_on:
-#        - zookeeper
+  zookeeper:
+    image: bitnami/zookeeper:latest
+    ports:
+      - "2181:2181"
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    networks:
+      nexmotracing:
+        aliases:
+          - zookeeper
+  
+  kafka:
+    image: bitnami/kafka:latest
+    ports:
+      - "9092:9092"
+    environment:
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - ALLOW_PLAINTEXT_LISTENER=yes
+    networks:
+      nexmotracing:
+        aliases:
+          - kafka
+    depends_on:
+        - zookeeper
     
 networks:
   nexmotracing: {}
