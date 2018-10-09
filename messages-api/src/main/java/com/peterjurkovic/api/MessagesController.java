@@ -3,17 +3,20 @@ package com.peterjurkovic.api;
 import io.opentracing.Span;
 import io.opentracing.Tracer;
 import io.opentracing.log.Fields;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import io.opentracing.tag.Tags;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.context.request.WebRequest;
 
-import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 
@@ -22,7 +25,6 @@ import static java.util.Collections.singletonMap;
 @RestController
 public class MessagesController {
 
-    Logger log = LoggerFactory.getLogger(getClass());
 
     @Autowired
     private RestTemplate restTemplate;
@@ -36,19 +38,67 @@ public class MessagesController {
     @Autowired
     private KafkaTemplate<String, String> kafkaTemplate;
 
+    @ResponseStatus(HttpStatus.ACCEPTED)
     @RequestMapping
     public Map<String, String> sendMessage(@RequestParam(value = "fail", defaultValue = "false") boolean fail,
+                                           @RequestParam(value = "retry", defaultValue = "false") boolean retry,
                                            @RequestParam(value = "message", defaultValue = "Hi there!") String message,
                                            @RequestHeader(value = "uber-trace-id", required = false) String traceId) {
-        Span serverSpan = tracer.activeSpan();
+        parseRequest();
 
+        authCheck(fail, retry);
+
+        balanceCheck();
+
+        sendToKafka(message);
+
+        Logger.info("Sent!");
+        return singletonMap("traceId", traceId);
+    }
+
+    private void authCheck(boolean fail, boolean retry){
+        Logger.info("Performing authentication check");
+        try {
+            restTemplate.getForEntity(props.getAuthUrl() + "/auth" + (fail || retry ? "?fail=true" : ""), Object.class);
+        } catch (Exception e) {
+            if (retry) {
+                Logger.warn("Authentication check has failed, retrying...", e);
+                restTemplate.getForEntity(props.getAuthUrl() + "/auth", Object.class);
+            } else {
+                throw e;
+            }
+        }
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, ?>> handle(Exception e, WebRequest req){
+        Tags.ERROR.set(tracer.activeSpan(), true);
+        Logger.warn("Failed to authenticate user", e);
+        return new ResponseEntity<>(singletonMap("traceId", req.getHeaderValues("uber-trace-id")),
+                                    HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
+    private void sendToKafka(String message){
+        Logger.info("Publishing message to kafka");
+        kafkaTemplate.send("messages", message);
+    }
+
+
+    private void balanceCheck(){
+        Logger.info("Checking if an account has enough balance");
+        restTemplate.getForEntity(props.getQuotaUrl() + "/balance", Object.class);
+    }
+
+
+    private void parseRequest(){
+        Span serverSpan = tracer.activeSpan();
         Span span = tracer.buildSpan("parsing")
                           .asChildOf(serverSpan)
                           .start();
 
         try {
             Thread.sleep(25L);
-            span.log(MapMaker.fields(LogLevel.FIELD_NAME, LogLevel.INFO, Fields.MESSAGE, "Parsing request"));
+            Logger.info("Parsing request");
             serverSpan.setBaggageItem("messageID", UUID.randomUUID().toString());
             serverSpan.setBaggageItem("apiKey", "nexmo");
         } catch (InterruptedException e) {
@@ -56,24 +106,10 @@ public class MessagesController {
         } finally {
             span.finish();
         }
+    }
 
-        serverSpan.log(MapMaker.fields(LogLevel.FIELD_NAME, LogLevel.INFO, Fields.MESSAGE, "Performing authentication check"));
-        try {
-            restTemplate.getForEntity(props.getAuthUrl() + "/auth" + (fail ? "?fail=true" : ""), Object.class);
-        } catch (Exception e) {
-            serverSpan.log(MapMaker.fields(LogLevel.FIELD_NAME, LogLevel.WARN, Fields.MESSAGE, "Authentication check has failed, retrying...", "ex", e));
-            restTemplate.getForEntity(props.getAuthUrl() + "/auth", Object.class);
-        }
-
-        serverSpan.log(MapMaker.fields(LogLevel.FIELD_NAME, LogLevel.INFO, Fields.MESSAGE, "Checking if an account has enough balance"));
-
-
+    private void checkBalance(){
+        Logger.info("Checking if an account has enough balance");
         restTemplate.getForEntity(props.getQuotaUrl() + "/balance", Object.class);
-
-        serverSpan.log(MapMaker.fields(LogLevel.FIELD_NAME, LogLevel.INFO, Fields.MESSAGE, "Publishing message to kafka"));
-        kafkaTemplate.send("messages", message);
-
-        serverSpan.log(MapMaker.fields(LogLevel.FIELD_NAME, LogLevel.INFO, Fields.MESSAGE, "Sent"));
-        return singletonMap("traceId", traceId);
     }
 }
