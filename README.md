@@ -9,7 +9,7 @@ A demo application demonstrating Opentracing API &amp; Jaeger capabilities. The 
 - Messages backend - written in Java & Spring
 - Jeager
 
-Here it is how it looks like:
+A service dependency diagram
 -- 
 ![Architecture](http://upload.peterjurkovic.com/uploaded_files/demo-architecture.png)
 
