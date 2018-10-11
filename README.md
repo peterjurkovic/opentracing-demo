@@ -7,6 +7,7 @@ A demo application demonstrating Opentracing API &amp; Jaeger capabilities. The 
 - Quota, written in GO lang , talks to mock Couchbase service
 - Kafka
 - Messages backend - written in Java & Spring
+- Jeager
 
 Here it is how it looks like:
 -- 
