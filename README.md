@@ -23,7 +23,7 @@ docker-compose up
 
 ## How to use it
 
-In order to create s span send a request
+In order to create a trace send a request:
 
 ### curl request
 ```
@@ -38,6 +38,8 @@ http POST :8080/messages
 
 
 then go to Jaeger UI `http://localhost:16686/`
+
+You can also simulate a failure, just send GET parameter `fail=true` or retry `retry=true`
 
 
 ![Jaeger](http://upload.peterjurkovic.com/uploaded_files/opentracing.png)
