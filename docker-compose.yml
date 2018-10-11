@@ -20,9 +20,7 @@ services:
       - messages-api-service
 
   auth-service:
-    build:
-      context: ./auth/
-      dockerfile: ./Dockerfile
+    image: peterjurkovic/opentracing-auth:latest
     networks:
       nexmotracing:
         aliases:
@@ -35,9 +33,7 @@ services:
       - AUTH_SERVER_PORT=3030
 
   quota-service:
-    build:
-      context: ./quota/
-      dockerfile: ./Dockerfile
+    image: peterjurkovic/opentracing-quota:latest
     networks:
       nexmotracing:
         aliases:
@@ -50,9 +46,7 @@ services:
       - QUOTA_HTTP_COLLECTOR_URL=http://jaeger:14268/api/traces
 
   messages-api-service:
-    build:
-      context: ./messages-api/
-      dockerfile: ./Dockerfile
+    image: peterjurkovic/opentracing-messages-api:latest
     networks:
       nexmotracing:
         aliases:
@@ -72,9 +66,7 @@ services:
       - kafka
 
   messages-backend-service:
-    build:
-      context: ./messages-backend/
-      dockerfile: ./Dockerfile
+    image: peterjurkovic/opentracing-messages-backend:latest
     networks:
       nexmotracing:
         aliases:

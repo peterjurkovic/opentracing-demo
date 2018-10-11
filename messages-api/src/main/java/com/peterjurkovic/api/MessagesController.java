@@ -2,7 +2,6 @@ package com.peterjurkovic.api;
 
 import io.opentracing.Span;
 import io.opentracing.Tracer;
-import io.opentracing.log.Fields;
 import io.opentracing.tag.Tags;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
