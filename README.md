@@ -24,7 +24,7 @@ docker-compose up
 
 ## How to use it
 
-In order to create a trace send a request:
+In order to generate a trace send a request:
 
 ### curl request
 ```
